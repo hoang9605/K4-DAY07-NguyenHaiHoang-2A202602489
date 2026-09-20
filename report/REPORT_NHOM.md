@@ -87,10 +87,13 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
 CHUNKER = HeadingChunker(chunk_size=500)
 ```
 
-**Thành viên 2 — [Tên]**
-- **Loại chiến lược:**
-- **Mô tả & lý do chọn:**
+**Thành viên 2 — Lê Tuấn Đạt (2A202602623)**
+- **Loại chiến lược:** Custom `SlidingSentenceChunker(3, 1)` — cửa sổ trượt theo câu có chồng lấn. Chiến lược này khác nguyên lý với cách chia theo heading của thành viên 1, tạo hai hướng đối lập để so sánh.
+- **Mô tả & lý do chọn:** Văn bản được chia thành cửa sổ nhỏ gồm 3 câu và mỗi chunk dùng chung 1 câu với chunk kế tiếp. Chồng lấn giúp giữ dữ kiện nằm sát ranh giới, đổi lại số chunk tăng và mỗi chunk có ít ngữ cảnh bao quanh hơn.
 - **Code snippet (nếu custom):**
+```python
+CHUNKER = SlidingSentenceChunker(3, 1)
+```
 
 **Thành viên 3 — [Tên]**
 - **Loại chiến lược:**
@@ -101,12 +104,12 @@ CHUNKER = HeadingChunker(chunk_size=500)
 
 | Thành viên | Chiến lược (Strategy) | Điểm truy xuất (/10) | Điểm mạnh | Điểm yếu |
 |-----------|----------|----------------------|-----------|----------|
-| Nguyễn Hải Hoàng | Custom `HeadingChunker` + fallback `RecursiveChunker` | 10/10 | Giữ tiêu đề trong từng chunk, bảo toàn ngữ cảnh của các mục chính sách; cả 5 query đều tìm đúng nguồn ở top-1 | Phụ thuộc tài liệu có cấu trúc heading rõ ràng; tài liệu trình bày không nhất quán vẫn phải dùng recursive fallback |
-| | | | | |
+| Nguyễn Hải Hoàng | Custom `HeadingChunker` + fallback `RecursiveChunker` | **5/10** (chunk-level, lần chạy so sánh chung) | Giữ tiêu đề và ngữ cảnh của điều khoản; thắng Q1 vì giữ điều kiện 35 ngày cùng ngoại lệ Apple | Phụ thuộc cấu trúc heading; Q4 và Q5 có đúng tài liệu nhưng gold chunk nằm ngoài top-3 |
+| Lê Tuấn Đạt | Custom `SlidingSentenceChunker(3, 1)` — cửa sổ trượt có chồng lấn | **7/10** (chunk-level), **8/10** (doc-level) | Khoanh đúng dữ kiện cụ thể: Q5 hạng 1 và Q4 hạng 3; overlap hạn chế mất dữ kiện ở ranh giới | Chunk trung bình chỉ 192 ký tự nên dễ mất ngữ cảnh; Q1 tách bullet khỏi dòng “Lưu ý”; số chunk gấp 2,9 lần nên tốn bộ nhớ và thời gian embedding |
 | | | | | |
 
 **Chiến lược nào tốt nhất cho chủ đề này? Tại sao?**
-> *Viết 2-3 câu — đây là phần được đánh giá cao nhất (khả năng suy nghĩ & giải thích):*
+> Trên lần chạy so sánh chung, `SlidingSentenceChunker` tốt hơn về tổng điểm chunk-level (7/10 so với 5/10) vì cửa sổ nhỏ định vị chính xác các dữ kiện ngắn ở Q4 và Q5. Tuy nhiên, `HeadingChunker` tốt hơn ở Q1 vì giữ điều kiện và ngoại lệ trong cùng một mục. Vì vậy không có chiến lược thắng tuyệt đối: sliding phù hợp tra cứu dữ kiện cụ thể, còn heading phù hợp điều khoản cần ngữ cảnh trọn vẹn.
 
 ---
 
@@ -135,17 +138,20 @@ CHUNKER = HeadingChunker(chunk_size=500)
 ### Tổng hợp chất lượng truy xuất của nhóm
 
 > Cách chấm (theo `docs/SCORING.md`): **2 điểm/câu** — top-3 chứa chunk liên quan + agent trả lời đúng (2), có liên quan nhưng thiếu/không ở top-1 (1), không có trong top-3 (0).
+>
+> Bảng dưới dùng lần chạy so sánh chung của hai thành viên trên cùng điều kiện. Kết quả này khác lần chạy độc lập của `bench.py` trong báo cáo cá nhân vì lần chạy chung chấm đúng thứ hạng của chunk chứa gold answer trên corpus so sánh.
 
-| # | Câu hỏi | Chiến lược tốt nhất cho câu này | Có chunk liên quan trong top-3? | Ghi chú |
-|---|---------|-------------------------------|-------------------------------|---------|
-| 1 | Thời hạn đổi trả và ngoại lệ Apple | `HeadingChunker` | Có — top-1, score 0.8480 | Đúng tài liệu Điện Máy Chợ Lớn |
-| 2 | Mốc thẩm định 15/20 ngày và xử lý quá hạn | `HeadingChunker` | Có — top-1, score 0.8236 | Đúng mục quy trình thẩm định của Di Động Việt |
-| 3 | Chi phí vận chuyển khi bảo hành | `HeadingChunker` | Có — top-1, score 0.7901 | Lọc `audience=buyer`; đúng quy định MemoryZone |
-| 4 | Trách nhiệm bảo hành trên Shopee | `HeadingChunker` | Có — top-1, score 0.9259 | Lọc `audience=seller`; top-3 đều là nội dung dành cho seller |
-| 5 | Trách nhiệm đối với dữ liệu | `HeadingChunker` | Có — top-1, score 0.9295 | Đúng điều khoản MemoryZone không chịu trách nhiệm dữ liệu |
+| # | Câu hỏi | Chiến lược tốt nhất cho câu này | Chunk chứa gold answer nằm ở đâu? | Hoàng | Đạt |
+|---|---|---|---|---:|---:|
+| 1 | Chợ Lớn: 35 ngày và ngoại lệ Apple | **Heading** | Hoàng: hạng 3; Đạt: ngoài top-3 | **1** | 0 |
+| 2 | Di Động Việt: thời hạn 15/20 ngày | Hòa | Cả hai: **hạng 1** | 2 | 2 |
+| 3 | MemoryZone: chi phí vận chuyển một chiều | Hòa | Cả hai: **hạng 1** | 2 | 2 |
+| 4 | Shopee: bên chịu trách nhiệm bảo hành | **Sliding** | Hoàng: hạng 4/137; Đạt: hạng 3 | 0 | **1** |
+| 5 | MemoryZone: trách nhiệm đối với dữ liệu | **Sliding** | Hoàng: hạng 30/200; Đạt: **hạng 1** | 0 | **2** |
+|  |  |  | **Tổng** | **5/10** | **7/10** |
 
 **Lọc bằng metadata có giúp ích không? Ở câu hỏi nào?**
-> Có, rõ nhất ở câu 4. Khi không lọc, top-3 gồm hai chunk của `shopee-seller-warranty` và một chunk của `shopee-buyer-warranty`; với `metadata_filter={"audience": "seller"}`, cả ba kết quả đều thuộc tài liệu seller. Top-1 vẫn đúng trong cả hai trường hợp, nhưng bộ lọc loại bỏ nội dung dành cho người mua và làm ngữ cảnh đưa vào agent nhất quán với đối tượng cần trả lời.
+> Có, rõ nhất ở câu 4 vì corpus có hai tài liệu Shopee dùng từ vựng gần giống nhau nhưng dành cho hai đối tượng khác nhau. `metadata_filter={"audience": "seller"}` loại nội dung buyer khỏi tập ứng viên trước khi xếp hạng, giúp ngữ cảnh nhất quán với trách nhiệm của Người Bán. Tuy vậy, kết quả so sánh cũng cho thấy metadata đúng chưa đủ: chiến lược chunking vẫn quyết định gold answer có lọt vào top-3 hay không.
 
 ---
 
