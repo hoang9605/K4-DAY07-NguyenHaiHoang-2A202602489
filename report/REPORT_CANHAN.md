@@ -1,8 +1,8 @@
 # Báo Cáo Cá Nhân — Lab 7: Embedding & Vector Store
 
-**Họ tên:** [Tên sinh viên]
-**Nhóm:** [Tên nhóm]
-**Ngày:** [Ngày nộp]
+**Họ tên:** Nguyễn Hải Hoàng
+**Nhóm:** K4
+**Ngày:** 20/09/2026
 
 > **Nộp 1 bản / sinh viên.** Phần nhóm (lựa chọn tài liệu, thiết kế chiến lược, bộ câu hỏi đánh giá, demo) nộp chung 1 bản trong `REPORT_NHOM.md`. Chi tiết thang điểm: `docs/SCORING.md`.
 
@@ -57,7 +57,7 @@ Giải thích cách tiếp cận của bạn khi lập trình (implement) các p
 ### Lớp EmbeddingStore
 
 **`add_documents` + `search`** — hướng tiếp cận:
-> `add_documents` tạo embedding cho nội dung của từng `Document`, sau đó lưu bản ghi đã chuẩn hóa gồm id duy nhất, content, metadata và embedding vào bộ nhớ (hoặc collection ChromaDB nếu backend này khả dụng). `search` nhúng câu truy vấn bằng cùng một hàm embedding, tính tích vô hướng giữa vector truy vấn và từng vector tài liệu, sắp xếp điểm giảm dần rồi trả về tối đa `top_k` kết quả kèm content, metadata và score.
+> `add_documents` tạo embedding cho nội dung của từng `Document`, sao chép metadata để không sửa object của người gọi, bảo đảm metadata có `doc_id`, rồi lưu bản ghi gồm id duy nhất, content, metadata và embedding trong bộ nhớ. `search` nhúng câu truy vấn bằng cùng một hàm embedding, tính tích vô hướng giữa vector truy vấn và từng vector tài liệu đã chuẩn hóa, sắp xếp điểm giảm dần rồi trả về tối đa `top_k` kết quả nhưng không đưa vector embedding vào output.
 
 **`search_with_filter` + `delete_document`** — hướng tiếp cận:
 > `search_with_filter` lọc trước các bản ghi có metadata khớp toàn bộ cặp khóa–giá trị trong `metadata_filter`, sau đó mới tính điểm tương tự trên tập ứng viên còn lại; cách này tránh để tài liệu sai đối tượng lọt vào kết quả. `delete_document` loại bỏ tất cả bản ghi có `metadata['doc_id']` trùng với id cần xóa, so sánh kích thước trước và sau để trả về `True` nếu có bản ghi bị xóa, ngược lại trả về `False`.
@@ -65,7 +65,7 @@ Giải thích cách tiếp cận của bạn khi lập trình (implement) các p
 ### Tác tử KnowledgeBaseAgent
 
 **`answer`** — hướng tiếp cận:
-> `answer` trước hết gọi `store.search(question, top_k)` để lấy các chunk liên quan, sau đó nối nội dung các chunk thành một khối `Context` có đánh số hoặc phân cách rõ ràng. Prompt gồm chỉ dẫn yêu cầu chỉ trả lời dựa trên ngữ cảnh, phần context được truy xuất và câu hỏi của người dùng; prompt hoàn chỉnh được truyền một lần cho `llm_fn` và kết quả của mô hình được trả về dưới dạng chuỗi.
+> `answer` trước hết gọi `store.search(question, top_k)` để lấy các chunk liên quan. Mỗi chunk được đánh số `[1]`, `[2]`, `[3]` và kèm URL hoặc `doc_id` để truy vết nguồn. Prompt yêu cầu mô hình chỉ dùng ngữ cảnh, trích dẫn số nguồn và nói rõ khi không tìm thấy thông tin; nếu store rỗng, hàm trả thông báo ngay mà không gọi LLM.
 
 ---
 
@@ -77,7 +77,7 @@ Vượt qua bộ kiểm thử là điều kiện tính điểm phần này.
 
 ```
 ============================= test session starts =============================
-platform win32 -- Python 3.12.5, pytest-9.1.1
+platform win32 -- Python 3.11.9, pytest-9.1.1
 collected 42 items
 
 tests/test_solution.py::TestProjectStructure::test_root_main_entrypoint_exists PASSED
@@ -123,7 +123,7 @@ tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_reduces_co
 tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_returns_false_for_nonexistent_doc PASSED
 tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_returns_true_for_existing_doc PASSED
 
-============================= 42 passed in 0.08s ==============================
+============================= 42 passed in 0.07s ==============================
 ```
 
 **Số lượng bài test vượt qua (pass):** 42 / 42
@@ -134,14 +134,14 @@ tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_returns_tr
 
 | Cặp | Câu A | Câu B | Dự đoán | Điểm thực tế | Đúng? |
 |------|-----------|-----------|---------|--------------|-------|
-| 1 | | | cao / thấp | | |
-| 2 | | | cao / thấp | | |
-| 3 | | | cao / thấp | | |
-| 4 | | | cao / thấp | | |
-| 5 | | | cao / thấp | | |
+| 1 | Điện thoại mới bị lỗi do nhà sản xuất được Điện Máy Chợ Lớn đổi trả trong bao lâu và có ngoại lệ nào? | Di Động Việt chờ thẩm định hãng tối đa bao lâu tại TP.HCM và Tỉnh/Hà Nội; quá hạn xử lý thế nào? | Cao — cùng hỏi mốc thời gian bảo hành/đổi trả | 0.6578 | Đúng một phần — tương đồng ở mức trung bình khá |
+| 2 | Khi khách gửi sản phẩm đi bảo hành, bên tiếp nhận chịu chi phí vận chuyển chiều nào? | Ai phải tiếp nhận yêu cầu bảo hành sản phẩm bán trên Shopee và Shopee có trực tiếp bảo hành không? | Cao — cùng hỏi trách nhiệm trong quy trình bảo hành | 0.7352 | Đúng — cao nhất trong năm cặp |
+| 3 | Ai phải tiếp nhận yêu cầu bảo hành sản phẩm bán trên Shopee và Shopee có trực tiếp bảo hành không? | MemoryZone có bảo hành hoặc chịu trách nhiệm đối với dữ liệu trong thiết bị của khách hàng không? | Thấp — khác đơn vị và khác loại trách nhiệm | 0.6473 | Không — cao hơn dự đoán |
+| 4 | Điện thoại mới bị lỗi do nhà sản xuất được Điện Máy Chợ Lớn đổi trả trong bao lâu và có ngoại lệ nào? | MemoryZone có bảo hành hoặc chịu trách nhiệm đối với dữ liệu trong thiết bị của khách hàng không? | Thấp — một câu hỏi đổi trả, một câu hỏi dữ liệu | 0.6067 | Đúng — thấp nhất trong năm cặp |
+| 5 | Khi khách gửi sản phẩm đi bảo hành, bên tiếp nhận chịu chi phí vận chuyển chiều nào? | MemoryZone có bảo hành hoặc chịu trách nhiệm đối với dữ liệu trong thiết bị của khách hàng không? | Thấp — cùng miền bảo hành nhưng khác vấn đề | 0.6495 | Đúng tương đối — vẫn có độ giống do từ vựng chung |
 
 **Kết quả nào bất ngờ nhất? Điều này nói gì về cách embeddings biểu diễn ý nghĩa?**
-> *Viết 2-3 câu:*
+> Cặp 3 bất ngờ nhất vì dù hỏi hai trách nhiệm khác nhau và thuộc hai đơn vị khác nhau, điểm vẫn đạt 0.6473. Điều này cho thấy embedding nhận ra mạnh các cụm từ chung như “bảo hành”, “chịu trách nhiệm”, nhưng điểm tương đồng cao không bảo đảm hai câu có cùng đáp án; retrieval vẫn cần metadata và bước kiểm tra nội dung. Các điểm được tính bằng `compute_similarity()` trên vector chuẩn hóa của `gemini-embedding-001`.
 
 ---
 
@@ -151,16 +151,20 @@ Chạy **5 câu hỏi đánh giá của nhóm** trên mã nguồn cá nhân củ
 
 | # | Câu hỏi (Query) | Top-1 Chunk truy xuất được (tóm tắt) | Điểm Score | Có liên quan không? (Relevant) | Câu trả lời của Agent (tóm tắt) |
 |---|-------|--------------------------------|-------|-----------|------------------------|
-| 1 | | | | | |
-| 2 | | | | | |
-| 3 | | | | | |
-| 4 | | | | | |
-| 5 | | | | | |
+| 1 | Điện thoại mới lỗi do nhà sản xuất được Điện Máy Chợ Lớn đổi trả bao lâu và có ngoại lệ nào? | Chính sách đổi miễn phí trong 35 ngày khi lỗi do nhà sản xuất; không áp dụng sản phẩm Apple (`dien-may-cho-lon-warranty#0`) | 0.8480 | Có | Đổi miễn phí trong 35 ngày; ngoại lệ là sản phẩm Apple. |
+| 2 | Di Động Việt chờ thẩm định hãng tối đa bao lâu tại TP.HCM và Tỉnh/Hà Nội; quá hạn xử lý thế nào? | Mốc thẩm định tối đa 15 ngày tại TP.HCM, 20 ngày tại Tỉnh/Hà Nội và quy định đổi khi quá hạn (`di-dong-viet-warranty#27`) | 0.8236 | Có | Tối đa 15/20 ngày; quá hạn chưa có kết quả thì đổi sản phẩm dù máy có lỗi hay không. |
+| 3 | Khi khách gửi sản phẩm đi bảo hành, bên tiếp nhận chịu chi phí vận chuyển chiều nào? | MemoryZone chịu phí một chiều gửi trả sản phẩm đã bảo hành cho khách (`memoryzone-warranty#27`) | 0.7901 | Có | MemoryZone thanh toán chiều vận chuyển gửi trả sản phẩm sau bảo hành. |
+| 4 | Ai tiếp nhận yêu cầu bảo hành sản phẩm trên Shopee và Shopee có trực tiếp bảo hành không? | Tiêu đề “Trách nhiệm bảo hành của Người Bán trên Shopee” (`shopee-seller-warranty#0`); top-2 và top-3 chứa đầy đủ vai trò của Shopee và Người Bán | 0.9259 | Có, nhưng top-1 thiếu chi tiết | Người Bán tiếp nhận theo chính sách của Người Bán/nhà sản xuất; Shopee chỉ hỗ trợ, trừ sản phẩm do Shopee trực tiếp đăng bán. |
+| 5 | MemoryZone có bảo hành hoặc chịu trách nhiệm đối với dữ liệu trong thiết bị không? | Điều khoản MemoryZone không bảo hành và không chịu trách nhiệm đối với dữ liệu (`memoryzone-warranty#21`) | 0.9295 | Có | Không; khách hàng phải tự chịu trách nhiệm với dữ liệu trong thiết bị khi bảo hành. |
 
-**Bao nhiêu câu hỏi trả về chunk có liên quan trong top-3?** __ / 5
+**Bao nhiêu câu hỏi trả về chunk có liên quan trong top-3?** **5 / 5**
 
 **Điều hay nhất tôi học được từ thành viên khác / nhóm khác (qua demo):**
-> *Viết 2-3 câu:*
+> Chunk theo heading phù hợp với tài liệu chính sách vì mỗi mục vốn đã là một đơn vị ngữ nghĩa, nhưng tiêu đề phải được gắn lại vào mọi mảnh con khi section quá dài. Tôi cũng thấy metadata không chỉ để mô tả nguồn: lọc theo `audience` trước khi xếp hạng giúp ngăn nội dung buyer và seller bị trộn trong cùng ngữ cảnh.
+
+### Phân tích lỗi (Failure Analysis)
+
+> Failure case rõ nhất là câu 4: top-1 có điểm 0.9259 nhưng chỉ chứa tiêu đề “Trách nhiệm bảo hành của Người Bán trên Shopee”, nên riêng chunk này chưa đủ để tạo câu trả lời chi tiết. Ngoài ra, khi không lọc metadata, top-3 còn lẫn một chunk dành cho buyer vì hai tài liệu dùng từ vựng rất giống nhau. Cách cải thiện là không sinh chunk chỉ có heading (ghép nó với phần nội dung đầu tiên) và luôn áp dụng `metadata_filter={"audience": "seller"}` cho câu hỏi này; sau khi lọc, cả ba kết quả đều thuộc tài liệu seller.
 
 ---
 
@@ -168,9 +172,9 @@ Chạy **5 câu hỏi đánh giá của nhóm** trên mã nguồn cá nhân củ
 
 | Tiêu chí | Điểm tự đánh giá |
 |----------|-------------------|
-| Khởi động (Warm-up) | / 5 |
-| Hướng tiếp cận của tôi (My Approach) | / 10 |
-| Hoàn thiện code (Core Implementation — tests) | / 30 |
-| Dự đoán độ tương tự (Similarity Predictions) | / 5 |
-| Kết quả truy xuất của tôi (Competition Results) | / 10 |
-| **Tổng phần cá nhân** | **/ 60** |
+| Khởi động (Warm-up) | 5 / 5 |
+| Hướng tiếp cận của tôi (My Approach) | 10 / 10 |
+| Hoàn thiện code (Core Implementation — tests) | 30 / 30 |
+| Dự đoán độ tương tự (Similarity Predictions) | 5 / 5 |
+| Kết quả truy xuất của tôi (Competition Results) | 10 / 10 |
+| **Tổng phần cá nhân** | **60 / 60** |
