@@ -15,29 +15,30 @@
 ### Độ tương tự Cosine (Cosine Similarity) (Bài tập 1.1)
 
 **Độ tương tự cosine cao (High cosine similarity) nghĩa là gì?**
-> *Viết 1-2 câu:*
+> Độ tương tự cosine cao nghĩa là hai vector biểu diễn văn bản có hướng gần nhau trong không gian embedding. Điều này thường cho thấy hai đoạn văn có nội dung hoặc ý nghĩa ngữ nghĩa gần giống nhau, ngay cả khi chúng không dùng hoàn toàn cùng từ ngữ.
 
 **Ví dụ có độ tương tự CAO:**
-- Câu A:
-- Câu B:
-- Tại sao tương đồng:
+- Câu A: "Khách hàng có thể yêu cầu hoàn tiền trong vòng 7 ngày."
+- Câu B: "Người mua được phép trả hàng và nhận lại tiền trong 7 ngày."
+- Tại sao tương đồng: Hai câu dùng cách diễn đạt khác nhau nhưng đều nói về quyền trả hàng, hoàn tiền của người mua trong cùng thời hạn 7 ngày.
 
 **Ví dụ có độ tương tự THẤP:**
-- Câu A:
-- Câu B:
-- Tại sao khác:
+- Câu A: "Người bán phải bảo hành sản phẩm điện tử theo chính sách."
+- Câu B: "Mô hình học máy học các quy luật từ dữ liệu huấn luyện."
+- Tại sao khác: Hai câu thuộc hai chủ đề và mục đích hoàn toàn khác nhau: một câu nói về chính sách bảo hành thương mại điện tử, câu còn lại nói về học máy.
 
 **Tại sao độ tương tự cosine (cosine similarity) được ưu tiên hơn khoảng cách Euclid (Euclidean distance) cho text embeddings?**
-> *Viết 1-2 câu:*
+> Cosine similarity tập trung vào góc giữa hai vector, tức là hướng biểu diễn ngữ nghĩa, và ít bị ảnh hưởng bởi độ lớn của vector. Khoảng cách Euclid phụ thuộc cả hướng lẫn độ lớn nên có thể đánh giá hai văn bản cùng ý nghĩa là xa nhau chỉ vì độ dài hoặc chuẩn vector khác nhau.
 
 ### Bài toán tính toán Chunking (Bài tập 1.2)
 
 **Tài liệu 10,000 ký tự, chunk_size=500, overlap=50. Bao nhiêu chunks?**
-> *Trình bày phép tính:*
-> *Đáp án:*
+> *Trình bày phép tính:* Bước trượt là `500 - 50 = 450` ký tự. Theo công thức: `ceil((10,000 - 50) / (500 - 50)) = ceil(9,950 / 450) = ceil(22.111...) = 23`.
+>
+> *Đáp án:* **23 chunks**.
 
 **Nếu độ chồng chéo (overlap) tăng lên 100, số lượng chunk thay đổi thế nào? Tại sao muốn độ chồng chéo nhiều hơn?**
-> *Viết 1-2 câu:*
+> Khi `overlap=100`, bước trượt còn `500 - 100 = 400`, vì vậy số chunk là `ceil((10,000 - 100) / 400) = ceil(24.75) = 25`, tăng từ 23 lên 25 chunks. Overlap lớn hơn giúp giữ lại ngữ cảnh nằm sát ranh giới giữa hai chunk, nhưng đồng thời làm tăng dữ liệu trùng lặp, dung lượng lưu trữ và chi phí embedding/truy xuất.
 
 ---
 
@@ -48,23 +49,23 @@ Giải thích cách tiếp cận của bạn khi lập trình (implement) các p
 ### Các hàm chia nhỏ (Chunking Functions)
 
 **`SentenceChunker.chunk`** — hướng tiếp cận:
-> *Viết 2-3 câu: dùng biểu thức chính quy (regex) gì để phát hiện câu? Xử lý trường hợp ngoại lệ (edge case) nào?*
+> Tôi tách câu bằng regex nhận diện khoảng trắng hoặc xuống dòng ngay sau các dấu kết câu `.`, `!`, `?`, chẳng hạn `(?<=[.!?])(?:[ \t]+|\n+)`, rồi loại bỏ phần rỗng và chuẩn hóa khoảng trắng. Sau đó, các câu được gom tuần tự theo `max_sentences_per_chunk`; văn bản rỗng trả về danh sách rỗng, còn giá trị giới hạn nhỏ hơn 1 được chuẩn hóa thành 1 để tránh vòng lặp hoặc chunk không hợp lệ.
 
 **`RecursiveChunker.chunk` / `_split`** — hướng tiếp cận:
-> *Viết 2-3 câu: thuật toán hoạt động thế nào? Base case (trường hợp cơ sở) là gì?*
+> Thuật toán thử các separator theo thứ tự ưu tiên `\n\n`, `\n`, `. `, khoảng trắng và cuối cùng là chuỗi rỗng; mỗi cấp chia văn bản bằng separator hiện tại, ghép các phần nhỏ nếu tổng độ dài vẫn không vượt `chunk_size`, còn phần quá dài được chuyển xuống cấp separator tiếp theo. Base case là đoạn đã ngắn hơn hoặc bằng `chunk_size`; nếu hết separator hoặc separator rỗng thì cắt trực tiếp theo kích thước cố định để luôn kết thúc và vẫn xử lý được văn bản không có dấu phân cách.
 
 ### Lớp EmbeddingStore
 
 **`add_documents` + `search`** — hướng tiếp cận:
-> *Viết 2-3 câu: lưu trữ thế nào? Tính độ tương tự ra sao?*
+> `add_documents` tạo embedding cho nội dung của từng `Document`, sau đó lưu bản ghi đã chuẩn hóa gồm id duy nhất, content, metadata và embedding vào bộ nhớ (hoặc collection ChromaDB nếu backend này khả dụng). `search` nhúng câu truy vấn bằng cùng một hàm embedding, tính tích vô hướng giữa vector truy vấn và từng vector tài liệu, sắp xếp điểm giảm dần rồi trả về tối đa `top_k` kết quả kèm content, metadata và score.
 
 **`search_with_filter` + `delete_document`** — hướng tiếp cận:
-> *Viết 2-3 câu: lọc (filter) trước hay sau? Xóa bằng cách nào?*
+> `search_with_filter` lọc trước các bản ghi có metadata khớp toàn bộ cặp khóa–giá trị trong `metadata_filter`, sau đó mới tính điểm tương tự trên tập ứng viên còn lại; cách này tránh để tài liệu sai đối tượng lọt vào kết quả. `delete_document` loại bỏ tất cả bản ghi có `metadata['doc_id']` trùng với id cần xóa, so sánh kích thước trước và sau để trả về `True` nếu có bản ghi bị xóa, ngược lại trả về `False`.
 
 ### Tác tử KnowledgeBaseAgent
 
 **`answer`** — hướng tiếp cận:
-> *Viết 2-3 câu: cấu trúc prompt? Cách đưa ngữ cảnh (inject context) vào thế nào?*
+> `answer` trước hết gọi `store.search(question, top_k)` để lấy các chunk liên quan, sau đó nối nội dung các chunk thành một khối `Context` có đánh số hoặc phân cách rõ ràng. Prompt gồm chỉ dẫn yêu cầu chỉ trả lời dựa trên ngữ cảnh, phần context được truy xuất và câu hỏi của người dùng; prompt hoàn chỉnh được truyền một lần cho `llm_fn` và kết quả của mô hình được trả về dưới dạng chuỗi.
 
 ---
 
