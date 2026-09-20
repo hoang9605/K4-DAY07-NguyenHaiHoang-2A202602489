@@ -95,10 +95,14 @@ CHUNKER = HeadingChunker(chunk_size=500)
 CHUNKER = SlidingSentenceChunker(3, 1)
 ```
 
-**Thành viên 3 — [Tên]**
-- **Loại chiến lược:**
-- **Mô tả & lý do chọn:**
-- **Code snippet (nếu custom):**
+**Thành viên 3 — Hoàng Văn Nam**
+- **Loại chiến lược:** `RecursiveChunker(chunk_size=500)`.
+- **Mô tả & lý do chọn:** Chiến lược thử lần lượt các ranh giới `\n\n`, `\n`, `. `, khoảng trắng rồi mới cắt cứng. Dữ liệu chính sách crawl từ web có đoạn, dòng và câu dài không đồng nhất, nên thứ tự này ưu tiên giữ một điều khoản hoặc đoạn văn hoàn chỉnh trong cùng chunk nhưng vẫn bảo đảm mỗi chunk không quá 500 ký tự. Các mảnh nhỏ liên tiếp được gộp trong giới hạn kích thước để tránh tạo quá nhiều chunk vụn.
+- **Kết quả đo:** Trên corpus riêng gồm 16 Markdown trong `data/warranty/`, chiến lược tạo 536 chunks, trung bình 398,73 ký tự/chunk (nhỏ nhất 1, lớn nhất 500). Riêng `77245.md` tạo 221 chunks, trung bình 350,53 ký tự; `chinh-sach-bao-hanh-dien-thoai.md` tạo 39 chunks, trung bình 412,56 ký tự.
+- **Code snippet:**
+```python
+CHUNKER = RecursiveChunker(chunk_size=500)
+```
 
 ### So Sánh Giữa Các Thành Viên
 
@@ -106,10 +110,10 @@ CHUNKER = SlidingSentenceChunker(3, 1)
 |-----------|----------|----------------------|-----------|----------|
 | Nguyễn Hải Hoàng | Custom `HeadingChunker` + fallback `RecursiveChunker` | **5/10** (chunk-level, lần chạy so sánh chung) | Giữ tiêu đề và ngữ cảnh của điều khoản; thắng Q1 vì giữ điều kiện 35 ngày cùng ngoại lệ Apple | Phụ thuộc cấu trúc heading; Q4 và Q5 có đúng tài liệu nhưng gold chunk nằm ngoài top-3 |
 | Lê Tuấn Đạt | Custom `SlidingSentenceChunker(3, 1)` — cửa sổ trượt có chồng lấn | **7/10** (chunk-level), **8/10** (doc-level) | Khoanh đúng dữ kiện cụ thể: Q5 hạng 1 và Q4 hạng 3; overlap hạn chế mất dữ kiện ở ranh giới | Chunk trung bình chỉ 192 ký tự nên dễ mất ngữ cảnh; Q1 tách bullet khỏi dòng “Lưu ý”; số chunk gấp 2,9 lần nên tốn bộ nhớ và thời gian embedding |
-| | | | | |
+| Hoàng Văn Nam | `RecursiveChunker(chunk_size=500)` | **2/10** trên corpus riêng (tham khảo) | Giữ ưu tiên ranh giới đoạn/dòng/câu, mọi chunk tối đa 500 ký tự; không phụ thuộc tài liệu có heading | Sinh 536 chunks; bốn trong năm expected document không vào top-3. Corpus và metadata khác lần chạy chung nên chưa thể so sánh trực tiếp |
 
 **Chiến lược nào tốt nhất cho chủ đề này? Tại sao?**
-> Trên lần chạy so sánh chung, `SlidingSentenceChunker` tốt hơn về tổng điểm chunk-level (7/10 so với 5/10) vì cửa sổ nhỏ định vị chính xác các dữ kiện ngắn ở Q4 và Q5. Tuy nhiên, `HeadingChunker` tốt hơn ở Q1 vì giữ điều kiện và ngoại lệ trong cùng một mục. Vì vậy không có chiến lược thắng tuyệt đối: sliding phù hợp tra cứu dữ kiện cụ thể, còn heading phù hợp điều khoản cần ngữ cảnh trọn vẹn.
+> Trên lần chạy so sánh chung, `SlidingSentenceChunker` tốt hơn về tổng điểm chunk-level (7/10 so với 5/10) vì cửa sổ nhỏ định vị chính xác các dữ kiện ngắn ở Q4 và Q5. Tuy nhiên, `HeadingChunker` tốt hơn ở Q1 vì giữ điều kiện và ngoại lệ trong cùng một mục. `RecursiveChunker` cho thấy khả năng kiểm soát kích thước ổn định nhưng kết quả 2/10 mới chỉ mang tính tham khảo do dùng corpus khác; vì vậy chưa dùng điểm này để xếp hạng công bằng cả ba chiến lược.
 
 ---
 
@@ -150,6 +154,19 @@ CHUNKER = SlidingSentenceChunker(3, 1)
 | 5 | MemoryZone: trách nhiệm đối với dữ liệu | **Sliding** | Hoàng: hạng 30/200; Đạt: **hạng 1** | 0 | **2** |
 |  |  |  | **Tổng** | **5/10** | **7/10** |
 
+#### Kết quả tham khảo của thành viên 3
+
+> Lần chạy của Hoàng Văn Nam dùng 16 file trong `data/warranty/`, tài liệu Shopee gộp `77245.md` với `audience=both` và một số `doc_id` khác corpus hiện tại. Bảng này ghi nhận trung thực raw output nhưng không gộp vào bảng so sánh chung phía trên.
+
+| # | Expected document | Kết quả `RecursiveChunker` | Điểm |
+|---|-------------------|----------------------------|-----:|
+| 1 | `dien-may-cho-lon-warranty` | Không có trong top-3 | 0 |
+| 2 | `chinh-sach-bao-hanh-dien-thoai` | Không có trong top-3 | 0 |
+| 3 | `memoryzone-warranty` | Không có trong top-3 | 0 |
+| 4 | `77245` với `audience=both` | Top-1, score 0.3468 | 2 |
+| 5 | `memoryzone-warranty` | Không có trong top-3 | 0 |
+|  | **Tổng** |  | **2/10** |
+
 **Lọc bằng metadata có giúp ích không? Ở câu hỏi nào?**
 > Có, rõ nhất ở câu 4 vì corpus có hai tài liệu Shopee dùng từ vựng gần giống nhau nhưng dành cho hai đối tượng khác nhau. `metadata_filter={"audience": "seller"}` loại nội dung buyer khỏi tập ứng viên trước khi xếp hạng, giúp ngữ cảnh nhất quán với trách nhiệm của Người Bán. Tuy vậy, kết quả so sánh cũng cho thấy metadata đúng chưa đủ: chiến lược chunking vẫn quyết định gold answer có lọt vào top-3 hay không.
 
@@ -158,13 +175,15 @@ CHUNKER = SlidingSentenceChunker(3, 1)
 ## 4. Thuyết trình (Demo) & Bài học nhóm — Nhóm (5 điểm)
 
 **Những phân tích (insights) hay nhất nhóm sẽ trình bày:**
-> *Liệt kê 2-3 ý:*
+> - Chunk nhỏ có overlap tăng khả năng khoanh đúng một dữ kiện ngắn, nhưng làm tăng số vector và có thể tách điều kiện khỏi ngoại lệ; chunk theo heading giữ ngữ cảnh tốt hơn nhưng phụ thuộc cấu trúc tài liệu.
+> - Metadata filter phải được áp dụng trước similarity search. Câu Shopee cho thấy nếu không lọc `audience`, nội dung buyer và seller có thể cùng chiếm các vị trí top‑k.
+> - Điểm cosine hoặc đúng `doc_id` chưa đủ để kết luận retrieval tốt: cần kiểm tra chính chunk chứa gold answer, vì một tiêu đề hoặc đoạn cùng tài liệu có thể có điểm cao nhưng không đủ thông tin trả lời.
 
 **Bài học rút ra khi so sánh trong nhóm:**
-> *Viết 2-3 câu — cùng tài liệu nhưng chiến lược khác nhau dẫn tới khác biệt gì?*
+> Cùng một tài liệu nhưng ranh giới chunk khác nhau làm thứ hạng gold answer thay đổi mạnh: heading thắng khi điều kiện và ngoại lệ nằm trong cùng mục, còn sliding thắng với dữ kiện ngắn nằm giữa các câu. Kết quả của Nam cũng cho thấy số lượng chunk lớn không đồng nghĩa retrieval tốt hơn; nhiễu từ corpus và embedding có thể đẩy tài liệu đúng ra ngoài top‑3.
 
 **Nếu làm lại, nhóm sẽ thay đổi gì trong chiến lược dữ liệu (data strategy)?**
-> *Viết 2-3 câu:*
+> Nhóm sẽ khóa một corpus, một bộ `doc_id`, năm query và metadata filter chung trước khi mỗi người chạy benchmark; chỉ dòng chọn chunker được phép thay đổi. Dữ liệu crawl sẽ được làm sạch kỹ hơn, bỏ menu/banner và chunk chỉ có tiêu đề; sau đó thử chiến lược lai: tách theo heading trước, dùng sliding hoặc recursive cho section dài. Nhóm cũng sẽ lưu raw output và cấu hình backend cùng commit để mọi kết quả có thể tái lập.
 
 ---
 
@@ -172,8 +191,8 @@ CHUNKER = SlidingSentenceChunker(3, 1)
 
 | Tiêu chí | Điểm tự đánh giá |
 |----------|-------------------|
-| Lựa chọn tài liệu (Document Set Quality) | / 10 |
-| Thiết kế chiến lược (Strategy Design) | / 15 |
-| Chất lượng truy xuất (Retrieval Quality) | / 10 |
-| Thuyết trình (Demo) | / 5 |
-| **Tổng phần nhóm** | **/ 40** |
+| Lựa chọn tài liệu (Document Set Quality) | 10 / 10 |
+| Thiết kế chiến lược (Strategy Design) | 14 / 15 |
+| Chất lượng truy xuất (Retrieval Quality) | 9 / 10 |
+| Thuyết trình (Demo) | 4 / 5 |
+| **Tổng phần nhóm** | **37 / 40** |
