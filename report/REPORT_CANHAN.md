@@ -49,7 +49,7 @@ Giải thích cách tiếp cận của bạn khi lập trình (implement) các p
 ### Các hàm chia nhỏ (Chunking Functions)
 
 **`SentenceChunker.chunk`** — hướng tiếp cận:
-> Tôi tách câu bằng regex nhận diện khoảng trắng hoặc xuống dòng ngay sau các dấu kết câu `.`, `!`, `?`, chẳng hạn `(?<=[.!?])(?:[ \t]+|\n+)`, rồi loại bỏ phần rỗng và chuẩn hóa khoảng trắng. Sau đó, các câu được gom tuần tự theo `max_sentences_per_chunk`; văn bản rỗng trả về danh sách rỗng, còn giá trị giới hạn nhỏ hơn 1 được chuẩn hóa thành 1 để tránh vòng lặp hoặc chunk không hợp lệ.
+> Tôi tách câu bằng regex nhận diện khoảng trắng hoặc xuống dòng ngay sau các dấu kết câu `.`, `!`, `?`, chẳng hạn `(?<=[.!?])(?:[ \t]+|\n+)`, rồi loại bỏ phần rỗng và chuẩn hóa khoảng trắng. Sau đó, các câu được gom tuần tự theo `max_sentences_per_chunk`; văn bản rỗng trả về danh sách rỗng, còn giá trị giới hạn nhỏ hơn 1 được chuẩn hóa thành 1. Hạn chế hiện tại là regex có thể tách sai tại chữ viết tắt như `TS.`, `v.v.` hoặc trong một số cách trình bày số thập phân.
 
 **`RecursiveChunker.chunk` / `_split`** — hướng tiếp cận:
 > Thuật toán thử các separator theo thứ tự ưu tiên `\n\n`, `\n`, `. `, khoảng trắng và cuối cùng là chuỗi rỗng; mỗi cấp chia văn bản bằng separator hiện tại, ghép các phần nhỏ nếu tổng độ dài vẫn không vượt `chunk_size`, còn phần quá dài được chuyển xuống cấp separator tiếp theo. Base case là đoạn đã ngắn hơn hoặc bằng `chunk_size`; nếu hết separator hoặc separator rỗng thì cắt trực tiếp theo kích thước cố định để luôn kết thúc và vẫn xử lý được văn bản không có dấu phân cách.
@@ -76,10 +76,57 @@ Vượt qua bộ kiểm thử là điều kiện tính điểm phần này.
 ### Kết Quả Kiểm Thử (Test Results)
 
 ```
-# Dán kết quả (output) của: pytest tests/ -v
+============================= test session starts =============================
+platform win32 -- Python 3.12.5, pytest-9.1.1
+collected 42 items
+
+tests/test_solution.py::TestProjectStructure::test_root_main_entrypoint_exists PASSED
+tests/test_solution.py::TestProjectStructure::test_src_package_exists PASSED
+tests/test_solution.py::TestClassBasedInterfaces::test_chunker_classes_exist PASSED
+tests/test_solution.py::TestClassBasedInterfaces::test_mock_embedder_exists PASSED
+tests/test_solution.py::TestFixedSizeChunker::test_chunks_respect_size PASSED
+tests/test_solution.py::TestFixedSizeChunker::test_correct_number_of_chunks_no_overlap PASSED
+tests/test_solution.py::TestFixedSizeChunker::test_empty_text_returns_empty_list PASSED
+tests/test_solution.py::TestFixedSizeChunker::test_no_overlap_no_shared_content PASSED
+tests/test_solution.py::TestFixedSizeChunker::test_overlap_creates_shared_content PASSED
+tests/test_solution.py::TestFixedSizeChunker::test_returns_list PASSED
+tests/test_solution.py::TestFixedSizeChunker::test_single_chunk_if_text_shorter PASSED
+tests/test_solution.py::TestSentenceChunker::test_chunks_are_strings PASSED
+tests/test_solution.py::TestSentenceChunker::test_respects_max_sentences PASSED
+tests/test_solution.py::TestSentenceChunker::test_returns_list PASSED
+tests/test_solution.py::TestSentenceChunker::test_single_sentence_max_gives_many_chunks PASSED
+tests/test_solution.py::TestRecursiveChunker::test_chunks_within_size_when_possible PASSED
+tests/test_solution.py::TestRecursiveChunker::test_empty_separators_falls_back_gracefully PASSED
+tests/test_solution.py::TestRecursiveChunker::test_handles_double_newline_separator PASSED
+tests/test_solution.py::TestRecursiveChunker::test_returns_list PASSED
+tests/test_solution.py::TestEmbeddingStore::test_add_documents_increases_size PASSED
+tests/test_solution.py::TestEmbeddingStore::test_add_more_increases_further PASSED
+tests/test_solution.py::TestEmbeddingStore::test_initial_size_is_zero PASSED
+tests/test_solution.py::TestEmbeddingStore::test_search_results_have_content_key PASSED
+tests/test_solution.py::TestEmbeddingStore::test_search_results_have_score_key PASSED
+tests/test_solution.py::TestEmbeddingStore::test_search_results_sorted_by_score_descending PASSED
+tests/test_solution.py::TestEmbeddingStore::test_search_returns_at_most_top_k PASSED
+tests/test_solution.py::TestEmbeddingStore::test_search_returns_list PASSED
+tests/test_solution.py::TestKnowledgeBaseAgent::test_answer_non_empty PASSED
+tests/test_solution.py::TestKnowledgeBaseAgent::test_answer_returns_string PASSED
+tests/test_solution.py::TestComputeSimilarity::test_identical_vectors_return_1 PASSED
+tests/test_solution.py::TestComputeSimilarity::test_opposite_vectors_return_minus_1 PASSED
+tests/test_solution.py::TestComputeSimilarity::test_orthogonal_vectors_return_0 PASSED
+tests/test_solution.py::TestComputeSimilarity::test_zero_vector_returns_0 PASSED
+tests/test_solution.py::TestCompareChunkingStrategies::test_counts_are_positive PASSED
+tests/test_solution.py::TestCompareChunkingStrategies::test_each_strategy_has_count_and_avg_length PASSED
+tests/test_solution.py::TestCompareChunkingStrategies::test_returns_three_strategies PASSED
+tests/test_solution.py::TestEmbeddingStoreSearchWithFilter::test_filter_by_department PASSED
+tests/test_solution.py::TestEmbeddingStoreSearchWithFilter::test_no_filter_returns_all_candidates PASSED
+tests/test_solution.py::TestEmbeddingStoreSearchWithFilter::test_returns_at_most_top_k PASSED
+tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_reduces_collection_size PASSED
+tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_returns_false_for_nonexistent_doc PASSED
+tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_returns_true_for_existing_doc PASSED
+
+============================= 42 passed in 0.08s ==============================
 ```
 
-**Số lượng bài test vượt qua (pass):** __ / 42
+**Số lượng bài test vượt qua (pass):** 42 / 42
 
 ---
 
